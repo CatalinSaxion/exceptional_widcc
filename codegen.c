@@ -1284,7 +1284,6 @@ static void gen_stmt(Node *node) {
 
 
   case ND_TRY: {
-    int c = count();
     println("  push %%rbp");
     println("  mov %%rsp, %%rbp");
     println("  mov $0, %%rax");
@@ -1295,18 +1294,18 @@ static void gen_stmt(Node *node) {
     println("  add $8, %%rsp");
     println("  pop %%rax");
     println("  pop %%rbp");
-    println("  jmp .L.finally.%d", c);
-    println(".L.catch.%d:", c);
+    println("  jmp .L.finally");
+    println(".L.catch:");
     if (node->exception) {
       gen_stmt(node->exception);
     } else {
       println("  mov $1, %%rax");
     }
-    println(".L.finally.%d:", c);
+    println(".L.finally");
     if (node->finally_block) {
       gen_stmt(node->finally_block);
     }
-    println(".L.end.%d:", c);
+    println(".L.end");
     return;
   }
 
@@ -1401,6 +1400,21 @@ static void gen_stmt(Node *node) {
     if (node->lhs)
       gen_stmt(node->lhs);
     return;
+
+  case ND_THROW:
+   if (node->exception) {
+      gen_expr(node->exception);
+      Type *ty = node->exception->ty;
+      switch (ty->kind) {
+        //future use
+        //predefined exceptions
+      }
+      println("  mov %%rax, %%rdi");
+    }
+    println("  call __cxa_throw");
+    return;
+
+
   case ND_RETURN:
     if (node->lhs) {
       gen_expr(node->lhs);
