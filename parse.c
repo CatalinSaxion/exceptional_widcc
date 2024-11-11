@@ -1630,6 +1630,11 @@ static void loop_body(Token **rest, Token *tok, Node *node) {
 //      | ident ":" stmt
 //      | "{" compound-stmt
 //      | expr-stmt
+//NEW
+//      | "try" "{" stmt "}"
+//      | "catch" "(" ident ")" "{" stmt "}"
+//      | "finally" "{" stmt "}"
+
 static Node *stmt(Token **rest, Token *tok, bool chained) {
   if (equal(tok, "return")) {
     Node *node = new_node(ND_RETURN, tok);
@@ -1647,6 +1652,55 @@ static Node *stmt(Token **rest, Token *tok, bool chained) {
     node->lhs = exp;
     return node;
   }
+
+  if (equal(tok, "try")) {
+    Node *node = new_node(ND_TRY, tok);
+    //tok = skip(tok->next, "{");
+    node->try_block = stmt(&tok, tok, true);
+    //tok = skip(tok, "}");
+    *rest = tok;
+    return node;
+  }
+
+  if (equal(tok, "catch")) {
+    Node *node = new_node(ND_CATCH, tok);
+    tok = skip(tok->next, "(");
+    // For now we just skip the exception type
+    tok = skip(tok->next, TK_EXCEPT);
+    tok = skip(tok, ")");
+    //tok = skip(tok, "{");
+    node->catch_block = stmt(&tok, tok, true);
+    //tok = skip(tok, "}");
+    *rest = tok;
+    return node;
+  }
+
+  if (equal(tok, "finally")) {
+    Node *node = new_node(ND_FINALLY, tok);
+    //tok = skip(tok->next, "{");
+    node->finally_block = stmt(&tok, tok->next, true);
+    //tok = skip(tok, "}");
+    *rest = tok;
+    return node;
+  }
+
+  if (equal(tok, "throw")) {
+    Node *node = new_node(ND_THROW, tok);
+    if (consume(rest, tok->next, ";"))
+      return node;
+
+    Node *except = expr(&tok, tok);
+    *rest = skip(tok, ";");
+
+    add_type(except);
+    Type *ty = current_fn->ty->throw_ty;
+    if (ty->kind == TY_FUNC)
+      except = new_cast(except, current_fn->ty->throw_ty);
+
+    node->exception = except;
+    return node;
+  }
+
 
   if (equal(tok, "if")) {
     Node *node = new_node(ND_IF, tok);

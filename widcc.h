@@ -87,6 +87,7 @@ char *format(char *fmt, ...) FMTCHK(1,2);
 
 // Token
 typedef enum {
+  TK_EXCEPT,  // Exception handling
   TK_IDENT,   // Identifiers
   TK_PUNCT,   // Punctuators
   TK_KEYWORD, // Keywords
@@ -250,6 +251,10 @@ typedef enum {
   ND_LOGAND,    // &&
   ND_LOGOR,     // ||
   ND_RETURN,    // "return"
+  ND_TRY,       // "try"
+  ND_CATCH,     // "catch"
+  ND_FINALLY,   // "finally"
+  ND_THROW,     // "throw"
   ND_IF,        // "if"
   ND_FOR,       // "for" or "while"
   ND_DO,        // "do"
@@ -284,6 +289,13 @@ struct Node {
 
   Node *lhs;     // Left-hand side
   Node *rhs;     // Right-hand side
+
+  // "catch" statement
+  Node *try_block;
+  Node *catch_block;
+  Node *finally_block;
+  Node *throw;
+  Node *exception;
 
   // "if" or "for" statement
   Node *cond;
@@ -409,6 +421,7 @@ struct Type {
   // Function type
   Scope *scopes;
   Type *return_ty;
+  Type *throw_ty;
   Obj *param_list;
   Node *pre_calc;
   bool is_variadic;

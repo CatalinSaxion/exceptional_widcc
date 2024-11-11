@@ -1281,6 +1281,35 @@ static void gen_stmt(Node *node) {
     print_loc(node->tok);
 
   switch (node->kind) {
+
+
+  case ND_TRY: {
+    int c = count();
+    println("  push %%rbp");
+    println("  mov %%rsp, %%rbp");
+    println("  mov $0, %%rax");
+    println("  push %%rax");
+    println("  push %%rax");
+    gen_stmt(node->try_block);
+    println("  add $8, %%rsp");
+    println("  add $8, %%rsp");
+    println("  pop %%rax");
+    println("  pop %%rbp");
+    println("  jmp .L.finally.%d", c);
+    println(".L.catch.%d:", c);
+    if (node->exception) {
+      gen_stmt(node->exception);
+    } else {
+      println("  mov $1, %%rax");
+    }
+    println(".L.finally.%d:", c);
+    if (node->finally_block) {
+      gen_stmt(node->finally_block);
+    }
+    println(".L.end.%d:", c);
+    return;
+  }
+
   case ND_IF: {
     int c = count();
     gen_expr(node->cond);
