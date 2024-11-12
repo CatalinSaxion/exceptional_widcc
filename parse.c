@@ -1657,7 +1657,7 @@ static Node *stmt(Token **rest, Token *tok, bool chained) {
     Node *node = new_node(ND_TRY, tok);
     //should we skip { and } ? if and for don't skip them
 
-    node->try_block = stmt(rest, tok->next, true);
+    node->try_block = stmt(&tok, tok, true);
 
     if (equal(tok, "catch")) {
       tok = skip(tok->next, "(");
@@ -1668,10 +1668,10 @@ static Node *stmt(Token **rest, Token *tok, bool chained) {
     }
 
     if (!equal(tok, "finally")) {
-      error_tok(tok, "Expected finally block after try(-catch) block");
+      error_tok(tok, "Expected 'finally' block after 'try' (and optional 'catch') block");
     }
 
-    node->finally_block = stmt(rest, tok->next, true);
+    node->finally_block = stmt(&tok, tok, true);
 
     *rest = tok;
 
