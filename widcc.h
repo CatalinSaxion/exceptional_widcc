@@ -87,7 +87,6 @@ char *format(char *fmt, ...) FMTCHK(1,2);
 
 // Token
 typedef enum {
-  TK_EXCEPT,  // Exception handling
   TK_IDENT,   // Identifiers
   TK_PUNCT,   // Punctuators
   TK_KEYWORD, // Keywords
@@ -255,6 +254,7 @@ typedef enum {
   ND_CATCH,     // "catch"
   ND_FINALLY,   // "finally"
   ND_THROW,     // "throw"
+  ND_EXCEPT,    // "except"
   ND_IF,        // "if"
   ND_FOR,       // "for" or "while"
   ND_DO,        // "do"

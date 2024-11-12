@@ -1653,51 +1653,37 @@ static Node *stmt(Token **rest, Token *tok, bool chained) {
     return node;
   }
 
-  if (equal(tok, "try")) {
+  if(equal(tok, "try")) {
     Node *node = new_node(ND_TRY, tok);
-    //tok = skip(tok->next, "{");
-    node->try_block = stmt(&tok, tok, true);
-    //tok = skip(tok, "}");
+    //should we skip { and } ? if and for don't skip them
+
+    node->try_block = stmt(rest, tok->next, true);
+
+    if (equal(tok, "catch")) {
+      tok = skip(tok->next, "(");
+      //for now catch will be empty ()
+      //node->exception = new_node(ND_EXCEPT, tok);
+      tok = skip(tok->next, ")");
+      node->catch_block = stmt(&tok, tok, true);
+    }
+
+    if (!equal(tok, "finally")) {
+      error_tok(tok, "Expected finally block after try(-catch) block");
+    }
+
+    node->finally_block = stmt(rest, tok->next, true);
+
     *rest = tok;
+
     return node;
   }
 
-  if (equal(tok, "catch")) {
-    Node *node = new_node(ND_CATCH, tok);
-    tok = skip(tok->next, "(");
-    // For now we just skip the exception type
-    tok = skip(tok->next, TK_EXCEPT);
-    tok = skip(tok, ")");
-    //tok = skip(tok, "{");
-    node->catch_block = stmt(&tok, tok, true);
-    //tok = skip(tok, "}");
-    *rest = tok;
-    return node;
-  }
 
-  if (equal(tok, "finally")) {
-    Node *node = new_node(ND_FINALLY, tok);
-    //tok = skip(tok->next, "{");
-    node->finally_block = stmt(&tok, tok->next, true);
-    //tok = skip(tok, "}");
-    *rest = tok;
-    return node;
-  }
 
   if (equal(tok, "throw")) {
     Node *node = new_node(ND_THROW, tok);
-    if (consume(rest, tok->next, ";"))
-      return node;
-
-    Node *except = expr(&tok, tok);
+    node->exception = expr(&tok, tok->next);
     *rest = skip(tok, ";");
-
-    add_type(except);
-    Type *ty = current_fn->ty->throw_ty;
-    if (ty->kind == TY_FUNC)
-      except = new_cast(except, current_fn->ty->throw_ty);
-
-    node->exception = except;
     return node;
   }
 

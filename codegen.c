@@ -1284,28 +1284,20 @@ static void gen_stmt(Node *node) {
 
 
   case ND_TRY: {
-    println("  push %%rbp");
-    println("  mov %%rsp, %%rbp");
-    println("  mov $0, %%rax");
-    println("  push %%rax");
-    println("  push %%rax");
+    printf("Generating code for try block\n");
     gen_stmt(node->try_block);
-    println("  add $8, %%rsp");
-    println("  add $8, %%rsp");
-    println("  pop %%rax");
-    println("  pop %%rbp");
-    println("  jmp .L.finally");
-    println(".L.catch:");
-    if (node->exception) {
-      gen_stmt(node->exception);
-    } else {
-      println("  mov $1, %%rax");
+
+    if(node->catch_block){
+      printf("Generating code for catch block\n");
+      printf(".Lcatch:\n");
+      gen_stmt(node->catch_block);
     }
-    println(".L.finally");
-    if (node->finally_block) {
-      gen_stmt(node->finally_block);
-    }
-    println(".L.end");
+
+    printf("Generating code for finally block\n");
+    printf(".Lfinally:\n");
+    gen_stmt(node->finally_block);
+
+    printf(".Lend:\n");
     return;
   }
 
@@ -1401,17 +1393,11 @@ static void gen_stmt(Node *node) {
       gen_stmt(node->lhs);
     return;
 
+// TO DO:
   case ND_THROW:
-   if (node->exception) {
-      gen_expr(node->exception);
-      Type *ty = node->exception->ty;
-      switch (ty->kind) {
-        //future use
-        //predefined exceptions
-      }
-      println("  mov %%rax, %%rdi");
-    }
-    println("  call __cxa_throw");
+    printf("Throwing exception\n");
+    // Code to handle throwing, e.g., jumping to catch or end
+    printf("jmp .Lcatch\n");
     return;
 
 
