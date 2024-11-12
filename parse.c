@@ -1656,22 +1656,29 @@ static Node *stmt(Token **rest, Token *tok, bool chained) {
   if(equal(tok, "try")) {
     Node *node = new_node(ND_TRY, tok);
     //should we skip { and } ? if and for don't skip them
-
+    tok = skip(tok->next, "{");
     node->try_block = stmt(&tok, tok, true);
+    tok = skip(tok, "}");
 
     if (equal(tok, "catch")) {
       tok = skip(tok->next, "(");
       //for now catch will be empty ()
       //node->exception = new_node(ND_EXCEPT, tok);
-      tok = skip(tok->next, ")");
+      tok = skip(tok, ")");
+      tok = skip(tok, "{");
       node->catch_block = stmt(&tok, tok, true);
+      tok = skip(tok, "}");
     }
 
     if (!equal(tok, "finally")) {
       error_tok(tok, "Expected 'finally' block after 'try' (and optional 'catch') block");
     }
 
+    tok = skip(tok->next, "{");
+
     node->finally_block = stmt(&tok, tok, true);
+
+    tok = skip(tok, "}");
 
     *rest = tok;
 
@@ -1682,7 +1689,7 @@ static Node *stmt(Token **rest, Token *tok, bool chained) {
 
   if (equal(tok, "throw")) {
     Node *node = new_node(ND_THROW, tok);
-    node->exception = expr(&tok, tok->next);
+    node->exception = expr(&tok, tok);
     *rest = skip(tok, ";");
     return node;
   }
