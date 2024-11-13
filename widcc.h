@@ -17,6 +17,9 @@
 #include <time.h>
 #include <unistd.h>
 
+
+
+
 #define MAX(x, y) ((x) < (y) ? (y) : (x))
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 
@@ -295,6 +298,7 @@ struct Node {
   Node *catch_block;
   Node *finally_block;
   Node *throw_expr;
+  Obj *catch_var; // Variable to hold the exception in the catch block
   Node *exception;
 
   // "if" or "for" statement

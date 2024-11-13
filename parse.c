@@ -27,6 +27,7 @@ typedef struct {
   int enum_val;
 } VarScope;
 
+
 // Variable attributes such as typedef or extern.
 typedef struct {
   bool is_typedef;
@@ -1635,6 +1636,46 @@ static void loop_body(Token **rest, Token *tok, Node *node) {
 //      | "catch" "(" ident ")" "{" stmt "}"
 //      | "finally" "{" stmt "}"
 
+
+static Node *try_stmt(Token **rest, Token *tok) {
+  Node *node = new_node(ND_TRY, tok);
+  tok = skip(tok, "try");
+
+
+  // Parse the try block
+  node->try_block = stmt(&tok, tok, true);
+
+  // Parse the catch block
+  if (equal(tok, "catch")) {
+    tok = skip(tok, "catch");
+    tok = skip(tok, "(");
+    char *ex_name = get_ident(tok->next);
+    tok = tok->next;
+    tok = skip(tok->next, ")");
+    Obj *ex_var = new_lvar(ex_name, ty_int); // Assuming exception type is void for simplicity
+    node->catch_var = ex_var;
+    node->catch_block = stmt(&tok, tok, true);
+  }
+
+  // Parse the finally block
+  if (equal(tok, "finally")) {
+    tok = skip(tok, "finally");
+    node->finally_block = stmt(&tok, tok, true);
+  }
+
+  *rest = tok;
+  return node;
+}
+
+static Node *throw_stmt(Token **rest, Token *tok) {
+  
+  Node *node = new_node(ND_THROW, tok);
+
+  tok = skip(tok, "throw");
+  node->exception = expr(rest, tok);
+  return node;
+}
+
 static Node *stmt(Token **rest, Token *tok, bool chained) {
   if (equal(tok, "return")) {
     Node *node = new_node(ND_RETURN, tok);
@@ -1653,47 +1694,16 @@ static Node *stmt(Token **rest, Token *tok, bool chained) {
     return node;
   }
 
-  if(equal(tok, "try")) {
-    Node *node = new_node(ND_TRY, tok);
-    //should we skip { and } ? if and for don't skip them
-    tok = skip(tok->next, "{");
-    node->try_block = stmt(&tok, tok, true);
-    tok = skip(tok, "}");
-
-    if (equal(tok, "catch")) {
-      tok = skip(tok->next, "(");
-      //for now catch will be empty ()
-      //node->exception = new_node(ND_EXCEPT, tok);
-      tok = skip(tok, ")");
-      tok = skip(tok, "{");
-      node->catch_block = stmt(&tok, tok, true);
-      tok = skip(tok, "}");
+  if (equal(tok, "try"))
+    return try_stmt(rest, tok);
+  if (equal(tok, "throw"))
+    return throw_stmt(rest, tok);
+  if (equal(tok, "finally")) {
+      Node *node = new_node(ND_FINALLY, tok);
+      tok = skip(tok, "finally");
+      node->finally_block = stmt(rest, tok, true);
+      return node;
     }
-
-    if (!equal(tok, "finally")) {
-      error_tok(tok, "Expected 'finally' block after 'try' (and optional 'catch') block");
-    }
-
-    tok = skip(tok->next, "{");
-
-    node->finally_block = stmt(&tok, tok, true);
-
-    tok = skip(tok, "}");
-
-    *rest = tok;
-
-    return node;
-  }
-
-
-
-  if (equal(tok, "throw")) {
-    Node *node = new_node(ND_THROW, tok);
-    node->exception = expr(&tok, tok);
-    *rest = skip(tok, ";");
-    return node;
-  }
-
 
   if (equal(tok, "if")) {
     Node *node = new_node(ND_IF, tok);

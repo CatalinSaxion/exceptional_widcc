@@ -3,6 +3,13 @@
 #define GP_MAX 6
 #define FP_MAX 8
 
+#include <setjmp.h>
+
+// Add globals for exception handling
+static jmp_buf *current_try_block = NULL;
+static int exception_value = 0;
+static bool in_finally = false;
+
 static FILE *output_file;
 static char *argreg8[] = {"%dil", "%sil", "%dl", "%cl", "%r8b", "%r9b"};
 static char *argreg16[] = {"%di", "%si", "%dx", "%cx", "%r8w", "%r9w"};
@@ -1283,23 +1290,69 @@ static void gen_stmt(Node *node) {
   switch (node->kind) {
 
 
-  case ND_TRY: {
-    printf("Generating code for try block\n");
-    gen_stmt(node->try_block);
+case ND_TRY: {
+  int c = count();
+  
+  // Allocate space for jmp_buf (typically 200 bytes) and align it
+  println("  sub $208, %%rsp"); // 200 bytes + 8 for alignment
+  println("  and $-16, %%rsp"); // Ensure 16-byte alignment
+  
+  // Store the current stack pointer as the new try block
+  println("  mov %%rsp, %%rbx"); 
+  
+  // Call setjmp with proper argument setup
+  println("  mov %%rsp, %%rdi");  // Pass jmp_buf address as first arg
+  println("  call setjmp@PLT");
+  println("  test %%eax, %%eax");
+  println("  jne .Lcatch_%d", c);
 
-    if(node->catch_block){
-      printf("Generating code for catch block\n");
-      printf(".Lcatch:\n");
-      gen_stmt(node->catch_block);
+  // Try block
+  gen_stmt(node->try_block); 
+  println("  jmp .Lfinally_%d", c);
+
+  // Catch block
+  println(".Lcatch_%d:", c);
+  if (node->catch_block) {
+    // Load exception value into catch parameter if it exists
+    if (node->catch_var) {
+      println("  mov exception_value(%%rip), %%rax");
+      println("  mov %%rax, %d(%%rbp)", node->catch_var->ofs);
     }
-
-    printf("Generating code for finally block\n");
-    printf(".Lfinally:\n");
-    gen_stmt(node->finally_block);
-
-    printf(".Lend:\n");
-    return;
+    gen_stmt(node->catch_block);
   }
+
+  // Finally block 
+  println(".Lfinally_%d:", c);
+  if (node->finally_block) {
+    gen_stmt(node->finally_block);
+  }
+
+  // Restore stack
+  println("  mov %%rbp, %%rsp"); // Restore original stack pointer
+  println("  lea -208(%%rbp), %%rsp"); // Adjust for allocated space
+  return;
+}
+
+case ND_THROW: {
+  // Evaluate throw expression and store it
+  if (node->exception) {
+    gen_expr(node->exception); // Generate code for throw expression
+    println("  mov %%rax, exception_value(%%rip)"); // Store full 64-bit value
+  } else {
+    println("  movq $1, exception_value(%%rip)"); // Default to 1 if no expression
+  }
+
+  // Call longjmp to unwind the stack
+  println("  test %%rbx, %%rbx"); // Check if we have a try block
+  println("  je .Lno_handler");
+  println("  mov %%rbx, %%rdi"); // jmp_buf pointer as first arg 
+  println("  mov $1, %%esi");    // Return value for setjmp
+  println("  call longjmp@PLT");
+  
+  println(".Lno_handler:");
+  println("  call abort@PLT");
+  return;
+}
 
   case ND_IF: {
     int c = count();
@@ -1393,12 +1446,7 @@ static void gen_stmt(Node *node) {
       gen_stmt(node->lhs);
     return;
 
-// TO DO:
-  case ND_THROW:
-    printf("Throwing exception\n");
-    // Code to handle throwing, e.g., jumping to catch or end
-    printf("jmp .Lcatch\n");
-    return;
+
 
 
   case ND_RETURN:
@@ -1714,8 +1762,27 @@ static void emit_text(Obj *prog) {
   }
 }
 
+// Initialize exception handling
+void init_exception_handling() {
+  // Global exception value
+  println(".data");
+  println(".align 8");
+  println("exception_value:");
+  println("  .quad 0");
+  println("  .size exception_value, 8");
+  
+  // Add any needed external declarations
+  println(".text");
+  println(".extern setjmp");
+  println(".extern longjmp");
+  println(".extern abort");
+}
+
 void codegen(Obj *prog, FILE *out) {
   output_file = out;
+
+  init_exception_handling();
+
 
   if (opt_g) {
     File **files = get_input_files();
