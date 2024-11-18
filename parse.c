@@ -1684,9 +1684,11 @@ static Node *stmt(Token **rest, Token *tok, bool chained) {
     if (consume(rest, tok->next, ";")) {
         error_tok(tok, "Expected to throw an exception");
     }
-    
+
     Node *exp = expr(&tok, tok->next);
     add_type(exp);
+
+    node->throw_exception = exp;
     *rest = skip(tok, ";");
     return node;
   }
