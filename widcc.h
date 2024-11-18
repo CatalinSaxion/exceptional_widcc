@@ -295,7 +295,9 @@ struct Node {
   Node *catch_block;
   Node *finally_block;
   Node *throw_expr;
-  Node *exception;
+  // exception type
+  Node *throw_exception;
+  Node *catch_exception;
 
   // "if" or "for" statement
   Node *cond;
@@ -387,6 +389,7 @@ typedef enum {
   TY_VLA, // variable-length array
   TY_STRUCT,
   TY_UNION,
+  TY_EXCEPTION,
 } TypeKind;
 
 struct Type {

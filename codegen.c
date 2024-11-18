@@ -1301,6 +1301,11 @@ static void gen_stmt(Node *node) {
     return;
   }
 
+  case ND_THROW:
+    printf("Generating code for throw\n");
+    gen_expr(node->throw_exception);
+    return;
+
   case ND_IF: {
     int c = count();
     gen_expr(node->cond);
@@ -1391,13 +1396,6 @@ static void gen_stmt(Node *node) {
     println("%s:", node->unique_label);
     if (node->lhs)
       gen_stmt(node->lhs);
-    return;
-
-// TO DO:
-  case ND_THROW:
-    printf("Throwing exception\n");
-    // Code to handle throwing, e.g., jumping to catch or end
-    printf("jmp .Lcatch\n");
     return;
 
 

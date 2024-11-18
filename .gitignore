@@ -11,5 +11,7 @@
 /stage2
 *.c
 *.h
+*.Identifier
 widcc
 .idea/
+.vscode/

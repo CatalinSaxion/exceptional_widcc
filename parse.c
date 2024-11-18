@@ -1632,8 +1632,9 @@ static void loop_body(Token **rest, Token *tok, Node *node) {
 //      | expr-stmt
 //NEW
 //      | "try" "{" stmt "}"
-//      | "catch" "(" ident ")" "{" stmt "}"
+//      | "catch" "(" expr ")" "{" stmt "}"
 //      | "finally" "{" stmt "}"
+//      | "throw" expr ";"
 
 static Node *stmt(Token **rest, Token *tok, bool chained) {
   if (equal(tok, "return")) {
@@ -1655,33 +1656,22 @@ static Node *stmt(Token **rest, Token *tok, bool chained) {
 
   if(equal(tok, "try")) {
     Node *node = new_node(ND_TRY, tok);
-    //should we skip { and } ? if and for don't skip them
-    tok = skip(tok->next, "{");
-    node->try_block = stmt(&tok, tok, true);
-    tok = skip(tok, "}");
+
+    node->try_block = stmt(&tok, tok->next, true);
 
     if (equal(tok, "catch")) {
       tok = skip(tok->next, "(");
-      //for now catch will be empty ()
-      //node->exception = new_node(ND_EXCEPT, tok);
+      node->catch_exception = expr(&tok, tok);
       tok = skip(tok, ")");
-      tok = skip(tok, "{");
       node->catch_block = stmt(&tok, tok, true);
-      tok = skip(tok, "}");
     }
 
     if (!equal(tok, "finally")) {
       error_tok(tok, "Expected 'finally' block after 'try' (and optional 'catch') block");
     }
 
-    tok = skip(tok->next, "{");
-
-    node->finally_block = stmt(&tok, tok, true);
-
-    tok = skip(tok, "}");
-
+    node->finally_block = stmt(&tok, tok->next, true);
     *rest = tok;
-
     return node;
   }
 
@@ -1689,7 +1679,14 @@ static Node *stmt(Token **rest, Token *tok, bool chained) {
 
   if (equal(tok, "throw")) {
     Node *node = new_node(ND_THROW, tok);
-    node->exception = expr(&tok, tok);
+
+    // Handle the case where no expression is provided
+    if (consume(rest, tok->next, ";")) {
+        error_tok(tok, "Expected to throw an exception");
+    }
+    
+    Node *exp = expr(&tok, tok->next);
+    add_type(exp);
     *rest = skip(tok, ";");
     return node;
   }
