@@ -20,7 +20,6 @@ static int peak_stk_usage;
 bool dont_reuse_stack;
 
 static int catch_nr = -1;
-static int finally_nr = -1;
 
 
 struct {
@@ -1291,19 +1290,18 @@ static void gen_stmt(Node *node) {
     int c = count(); // Generate a unique label for this try-catch-finally block
 
     catch_nr = c;
-    finally_nr = c;
 
     println("  push .Lcatch.%d ", catch_nr); // Push catch block label
-    println("  push .Lfinally.%d ", finally_nr); // Push finally block label
+    println("  push .Lfinally.%d ", c); // Push finally block label
     printf("Generating code for try block\n");
     gen_stmt(node->try_block);
 
     // Skip catch and go directly to the finally block if no throw occurred
-    println("  jmp .Lfinally.%d", finally_nr);
+    println("  jmp .Lfinally.%d", c);
 
     if(node->catch_block){
       printf("Generating code for catch block\n");
-      println(".Lcatch.%d:", c);
+      println(".Lcatch.%d:", catch_nr);
       gen_stmt(node->catch_block);
     }
 
