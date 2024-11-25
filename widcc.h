@@ -291,11 +291,12 @@ struct Node {
   Node *rhs;     // Right-hand side
 
   // "catch" statement
+  char* try_label;
   Node *try_block;
   Node *catch_block;
   Node *finally_block;
-  Node *throw_expr;
   // exception type
+  char* throw_label;
   Node *throw_exception;
   Node *catch_exception;
 

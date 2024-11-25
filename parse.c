@@ -86,6 +86,9 @@ static char *cont_label;
 // a switch statement. Otherwise, NULL.
 static Node *current_switch;
 
+// Points to a node representing a try if we are parsing
+static Node *current_try;
+
 static Obj *current_vla;
 static Obj *brk_vla;
 static Obj *cont_vla;
@@ -1656,7 +1659,9 @@ static Node *stmt(Token **rest, Token *tok, bool chained) {
 
   if(equal(tok, "try")) {
     Node *node = new_node(ND_TRY, tok);
-
+    node->try_label = new_unique_name();
+    Node *c_try = current_try;
+    current_try = node;
     node->try_block = stmt(&tok, tok->next, true);
 
     if (equal(tok, "catch")) {
@@ -1672,6 +1677,7 @@ static Node *stmt(Token **rest, Token *tok, bool chained) {
 
     node->finally_block = stmt(&tok, tok->next, true);
     *rest = tok;
+    current_try = c_try;
     return node;
   }
 
@@ -1679,6 +1685,9 @@ static Node *stmt(Token **rest, Token *tok, bool chained) {
 
   if (equal(tok, "throw")) {
     Node *node = new_node(ND_THROW, tok);
+    if(!current_try) {
+        error_tok(tok, "throw used outside of a try block");
+        }
 
     // Handle the case where no expression is provided
     if (consume(rest, tok->next, ";")) {
@@ -1689,6 +1698,9 @@ static Node *stmt(Token **rest, Token *tok, bool chained) {
     add_type(exp);
 
     node->throw_exception = exp;
+    node->throw_label = current_try->try_label;
+
+   current_try->throw_exception = node->throw_exception;
     *rest = skip(tok, ";");
     return node;
   }

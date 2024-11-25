@@ -19,8 +19,6 @@ static int lvar_stk_sz;
 static int peak_stk_usage;
 bool dont_reuse_stack;
 
-static int catch_nr = -1;
-
 
 struct {
   int *data;
@@ -1287,36 +1285,34 @@ static void gen_stmt(Node *node) {
 
 
   case ND_TRY: {
-    int c = count(); // Generate a unique label for this try-catch-finally block
-
-    catch_nr = c;
-
-    println("  push .Lcatch.%d ", catch_nr); // Push catch block label
-    println("  push .Lfinally.%d ", c); // Push finally block label
     printf("Generating code for try block\n");
     gen_stmt(node->try_block);
 
-    // Skip catch and go directly to the finally block if no throw occurred
-    println("  jmp .Lfinally.%d", c);
+    // Jump to the finally block if no exception occurs
+    println("  jmp %sfinally", node->try_label);
 
     if(node->catch_block){
       printf("Generating code for catch block\n");
-      println(".Lcatch.%d:", catch_nr);
+      //printf("Aici e %d\n",node->throw_exception);
+      println("%scatch:", node->try_label);
       gen_stmt(node->catch_block);
     }
 
     printf("Generating code for finally block\n");
-    println(".Lfinally.%d:", c);
+    println("%sfinally:", node->try_label);
     gen_stmt(node->finally_block);
 
-    println(".Lend.%d:", c);
+    println("%send:", node->try_label);
     return;
   }
 
   case ND_THROW:
     printf("Generating code for throw\n");
-    gen_expr(node->throw_exception);
-    println("  jmp .Lcatch.%d", catch_nr);
+    if (node->throw_exception)
+      gen_expr(node->throw_exception);
+
+    // Jump to the specific catch block
+    println("  jmp %scatch", node->throw_label);
     return;
 
 
