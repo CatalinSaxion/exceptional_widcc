@@ -6,8 +6,8 @@ int calc(int a, int b) {
 		printf("Hello from try 3 block\n");
 	throw 1;
 	}
-	catch(sum) {
-		printf("caught exception 3: %d\n", sum);
+	catch(int exception) {
+		printf("caught exception 3: %d\n", exception);
 	}
 	finally {
 		printf("Hello from finally 3  block\n");
@@ -17,28 +17,29 @@ int calc(int a, int b) {
 
 int main() {
     printf("Hello, World!\n");
-	int ex_nr=0;
 	try {
 
 		int sum = calc(1,2);
 		int a,b,c;
 		try {
 			printf("Hello from try 2 block\n");
-			throw("test");
+			char* ex = "test";
+			throw ex;
 			printf("Hello after throw 2 block\n");
 		}
-		catch(ex_nr) {
-			printf("caught exception 2: %d\n", ex_nr);
+		catch(char* ex_nr) {
+			printf("caught exception 2: %s\n", ex_nr);
 		}
 		finally {
 			printf("Hello from finally 2 block\n");
 		}
 		
-		throw("test");
+		char* ex2 = "test";
+		throw ex2;
 		printf("Hello after throw block\n");
 	}
-	catch(ex_nr) {
-		printf("caught exception: %d\n", ex_nr);
+	catch(char* ex_nr) {
+		printf("caught exception: %s\n", ex_nr);
 
 	}
 	finally {

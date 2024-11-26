@@ -6,7 +6,7 @@ int calc(int a, int b) {
 		printf("Hello from try 3 block\n");
 	throw 1;
 	}
-	catch(sum) {
+	catch(int sum) {
 		printf("caught exception 3: %d\n", sum);
 	}
 	finally {
@@ -23,13 +23,11 @@ int main() {
 		int sum = calc(1,2);
 		printf("Hello after throw block\n");
 	}
-	catch(ex_nr) {
+	catch(int ex_nr) {
 		printf("caught exception: %d\n", ex_nr);
-
 	}
 	finally {
 		printf("Hello from finally block\n");
-
 	}
 	
     return 0;
