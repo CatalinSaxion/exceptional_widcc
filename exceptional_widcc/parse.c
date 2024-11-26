@@ -1665,9 +1665,33 @@ static Node *stmt(Token **rest, Token *tok, bool chained) {
     node->try_block = stmt(&tok, tok->next, true);
 
     if (equal(tok, "catch")) {
-      tok = skip(tok->next, "(");
-      node->catch_exception = expr(&tok, tok);
-      tok = skip(tok, ")");
+      tok = tok->next; // consume catch
+      if (!consume(&tok, tok, "("))
+        error_tok(tok, "Expected '(' after 'catch'");
+
+      Token *type_tok = tok; // position of type token
+
+      Type *catch_ty = typename(&tok, tok);
+      if (!catch_ty)
+        error_tok(tok, "Type name expected");
+
+      if (node->throw_exception && 
+          catch_ty->kind != node->throw_exception->ty->kind) {
+          error_tok(type_tok, "catch type '%d' does not match thrown type '%d'",
+              catch_ty->kind, node->throw_exception->ty->kind);
+      }
+
+      char *name = get_ident(tok);
+      if (!name)
+        error_tok(tok, "Identifier expected");
+      
+      tok = tok->next;
+
+      if (!consume(&tok, tok, ")"))
+          error_tok(tok, "Expected ')' after catch parameter");
+
+      Obj *var = new_lvar(name, catch_ty);
+      node->catch_exception = new_var_node(var, tok);
       node->catch_block = stmt(&tok, tok, true);
     }
 
@@ -1687,7 +1711,7 @@ static Node *stmt(Token **rest, Token *tok, bool chained) {
     Node *node = new_node(ND_THROW, tok);
     if(!current_try) {
         error_tok(tok, "throw used outside of a try block");
-        }
+    }
 
     // Handle the case where no expression is provided
     if (consume(rest, tok->next, ";")) {

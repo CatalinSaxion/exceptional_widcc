@@ -1277,24 +1277,51 @@ static void gen_expr(Node *node) {
   error_tok(node->tok, "invalid expression");
 }
 
+
 static void gen_stmt(Node *node) {
   if (opt_g)
     print_loc(node->tok);
 
   switch (node->kind) {
 
-
   case ND_TRY: {
     printf("Generating code for try block\n");
     gen_stmt(node->try_block);
 
-    // Jump to the finally block if no exception occurs
+    // jump to the finally block if no exception occurs
     println("  jmp %sfinally", node->try_label);
 
     if(node->catch_block){
       printf("Generating code for catch block\n");
-      //printf("Aici e %d\n",node->throw_exception);
+
+      // store exception value before catch block starts
       println("%scatch:", node->try_label);
+
+      // check if there is a catch block with a variable to store the exception
+      if (node->catch_exception && node->catch_exception->var) {
+
+          // handle different types of caught exceptions based on variable type
+          switch(node->catch_exception->var->ty->kind) {
+            case TY_FLOAT:
+              // for float exceptions: Move 32-bit float from XMM0 register 
+              // to stack location relative to base pointer
+              // movss = Move Scalar Single-Precision Floating-Point Value
+              println("  movss %%xmm0, %d(%%rbp)", node->catch_exception->var->ofs);
+              break;
+            case TY_DOUBLE:
+              // for double exceptions: Move 64-bit double from XMM0 register
+              // to stack location relative to base pointer
+              // movsd = Move Scalar Double-Precision Floating-Point Value 
+              println("  movsd %%xmm0, %d(%%rbp)", node->catch_exception->var->ofs);
+              break;
+            default:
+              // for integer/pointer exceptions: Move value from RAX register
+              // to stack location relative to base pointer
+              // Standard mov instruction for general purpose registers
+              println("  mov %%rax, %d(%%rbp)", node->catch_exception->var->ofs);
+          }
+      }
+
       gen_stmt(node->catch_block);
     }
 
@@ -1306,15 +1333,16 @@ static void gen_stmt(Node *node) {
     return;
   }
 
-  case ND_THROW:
+  case ND_THROW: {
     printf("Generating code for throw\n");
-    if (node->throw_exception)
+    if (node->throw_exception){
       gen_expr(node->throw_exception);
+    }
 
-    // Jump to the specific catch block
+    // jump to the specific catch block
     println("  jmp %scatch", node->throw_label);
     return;
-
+  }
 
   case ND_IF: {
     int c = count();
