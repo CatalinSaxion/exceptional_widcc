@@ -111,8 +111,8 @@ static void initializer2(Token **rest, Token *tok, Initializer *init);
 static Initializer *initializer(Token **rest, Token *tok, Type *ty, Type **new_ty);
 static Node *lvar_initializer(Token **rest, Token *tok, Obj *var);
 static void gvar_initializer(Token **rest, Token *tok, Obj *var);
-static Node *compound_stmt(Token **rest, Token *tok, NodeKind kind);
-static Node *stmt(Token **rest, Token *tok, bool chained);
+static Node *compound_stmt(Token **rest, Token *tok, NodeKind kind, bool create_scope);
+static Node *stmt(Token **rest, Token *tok, bool chained, bool create_scope);
 static Node *expr_stmt(Token **rest, Token *tok);
 static Node *expr(Token **rest, Token *tok);
 static int64_t eval(Node *node);
@@ -1610,7 +1610,7 @@ static void loop_body(Token **rest, Token *tok, Node *node) {
   Obj *contvla = cont_vla;
   brk_vla = cont_vla = current_vla;
 
-  node->then = stmt(rest, tok, true);
+  node->then = stmt(rest, tok, true, true);
 
   brk_label = brk;
   cont_label = cont;
@@ -1639,7 +1639,7 @@ static void loop_body(Token **rest, Token *tok, Node *node) {
 //      | "finally" "{" stmt "}"
 //      | "throw" expr ";"
 
-static Node *stmt(Token **rest, Token *tok, bool chained) {
+static Node *stmt(Token **rest, Token *tok, bool chained, bool create_scope) {
   if (equal(tok, "return")) {
     Node *node = new_node(ND_RETURN, tok);
     if (consume(rest, tok->next, ";"))
@@ -1660,22 +1660,28 @@ static Node *stmt(Token **rest, Token *tok, bool chained) {
   if(equal(tok, "try")) {
     Node *node = new_node(ND_TRY, tok);
     node->try_label = new_unique_name();
+
+    enter_scope();
+
     Node *c_try = current_try;
     current_try = node;
-    node->try_block = stmt(&tok, tok->next, true);
+    node->try_block = stmt(&tok, tok->next, true, false);
 
     if (equal(tok, "catch")) {
       tok = skip(tok->next, "(");
       node->catch_exception = expr(&tok, tok);
       tok = skip(tok, ")");
-      node->catch_block = stmt(&tok, tok, true);
+      node->catch_block = stmt(&tok, tok, true, false);
     }
 
     if (!equal(tok, "finally")) {
       error_tok(tok, "Expected 'finally' block after 'try' (and optional 'catch') block");
     }
 
-    node->finally_block = stmt(&tok, tok->next, true);
+    node->finally_block = stmt(&tok, tok->next, true, false);
+
+    leave_scope();
+
     *rest = tok;
     current_try = c_try;
     return node;
@@ -1711,9 +1717,9 @@ static Node *stmt(Token **rest, Token *tok, bool chained) {
     tok = skip(tok->next, "(");
     node->cond = to_bool(expr(&tok, tok));
     tok = skip(tok, ")");
-    node->then = stmt(&tok, tok, true);
+    node->then = stmt(&tok, tok, true, true);
     if (equal(tok, "else"))
-      node->els = stmt(&tok, tok->next, true);
+      node->els = stmt(&tok, tok->next, true, true);
     *rest = tok;
     return node;
   }
@@ -1736,7 +1742,7 @@ static Node *stmt(Token **rest, Token *tok, bool chained) {
     Obj *vla = brk_vla;
     brk_vla = current_vla;
 
-    node->then = stmt(rest, tok, true);
+    node->then = stmt(rest, tok, true, true);
 
     current_switch = sw;
     brk_label = brk;
@@ -1775,7 +1781,7 @@ static Node *stmt(Token **rest, Token *tok, bool chained) {
 
     tok = skip(tok, ":");
     if (chained)
-      node->lhs = stmt(rest, tok, true);
+      node->lhs = stmt(rest, tok, true, true);
     else
       *rest = tok;
     node->begin = begin;
@@ -1796,7 +1802,7 @@ static Node *stmt(Token **rest, Token *tok, bool chained) {
 
     tok = skip(tok->next, ":");
     if (chained)
-      node->lhs = stmt(rest, tok, true);
+      node->lhs = stmt(rest, tok, true, true);
     else
       *rest = tok;
     current_switch->default_case = node;
@@ -1910,7 +1916,7 @@ static Node *stmt(Token **rest, Token *tok, bool chained) {
 
     tok = tok->next->next;
     if (chained)
-      node->lhs = stmt(rest, tok, true);
+      node->lhs = stmt(rest, tok, true, true);
     else
       *rest = tok;
     node->unique_label = new_unique_name();
@@ -1921,19 +1927,21 @@ static Node *stmt(Token **rest, Token *tok, bool chained) {
   }
 
   if (equal(tok, "{"))
-    return compound_stmt(rest, tok->next, ND_BLOCK);
+    return compound_stmt(rest, tok->next, ND_BLOCK, create_scope);
 
   return expr_stmt(rest, tok);
 }
 
 // compound-stmt = (typedef | declaration | stmt)* "}"
-static Node *compound_stmt(Token **rest, Token *tok, NodeKind kind) {
+static Node *compound_stmt(Token **rest, Token *tok, NodeKind kind, bool create_scope) {
   Node *node = new_node(kind, tok);
   Node head = {0};
   Node *cur = &head;
 
+  if (create_scope) {
   node->target_vla = current_vla;
   enter_scope();
+  }
 
   while (!equal(tok, "}")) {
     if (equal(tok, "_Static_assert")) {
@@ -1966,13 +1974,15 @@ static Node *compound_stmt(Token **rest, Token *tok, NodeKind kind) {
       }
       continue;
     }
-    cur = cur->next = stmt(&tok, tok, false);
+    cur = cur->next = stmt(&tok, tok, false, create_scope);
     add_type(cur);
   }
 
+  if (create_scope) {
   node->top_vla = current_vla;
   current_vla = node->target_vla;
   leave_scope();
+  }
 
   if (kind == ND_STMT_EXPR && cur->kind == ND_EXPR_STMT) {
     add_type(cur->lhs);
@@ -3148,7 +3158,7 @@ static Node *primary(Token **rest, Token *tok) {
     if (scope->parent == NULL)
       error_tok(tok, "statement expresssion at file scope");
 
-    Node *node = compound_stmt(&tok, tok->next->next, ND_STMT_EXPR);
+    Node *node = compound_stmt(&tok, tok->next->next, ND_STMT_EXPR, true);
     *rest = skip(tok, ")");
     return node;
   }
@@ -3485,7 +3495,7 @@ static void func_definition(Token **rest, Token *tok, Type *ty, VarAttr *attr, T
     ty->scopes = scope;
   }
 
-  fn->body = compound_stmt(rest, tok->next, ND_BLOCK);
+  fn->body = compound_stmt(rest, tok->next, ND_BLOCK, true);
 
   if (ty->pre_calc) {
     Node *calc = new_unary(ND_EXPR_STMT, ty->pre_calc, tok);

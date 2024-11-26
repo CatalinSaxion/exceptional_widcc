@@ -19,17 +19,21 @@ int main() {
     printf("Hello, World!\n");
 	int ex_nr=0;
 	try {
-
-		int sum = calc(1,2);
-		printf("Hello after throw block\n");
+		int c = 10;
+		printf("In try c is %d\n", c);
+		//int sum = calc(1,2);
+		//printf("Hello after throw block\n");
+		throw "caca";
 	}
 	catch(ex_nr) {
-		printf("caught exception: %d\n", ex_nr);
+		//printf("caught exception: %d\n", ex_nr);
 
 	}
 	finally {
-		printf("Hello from finally block\n");
-
+		//printf("Hello from finally block\n");
+		printf("In finally c is %d\n", c);
+		c=0;
+		printf("In finally we change c to %d\n", c);
 	}
 	
     return 0;
