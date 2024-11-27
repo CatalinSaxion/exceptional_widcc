@@ -1669,7 +1669,7 @@ static Node *stmt(Token **rest, Token *tok, bool chained) {
       if (!consume(&tok, tok, "("))
         error_tok(tok, "Expected '(' after 'catch'");
 
-      Token *type_tok = tok; // position of type token
+      Token *type_tok = tok;
 
       Type *catch_ty = typename(&tok, tok);
       if (!catch_ty)

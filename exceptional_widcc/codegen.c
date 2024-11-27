@@ -1297,29 +1297,28 @@ static void gen_stmt(Node *node) {
       // store exception value before catch block starts
       println("%scatch:", node->try_label);
 
-      // check if there is a catch block with a variable to store the exception
+      // check if there is a catch exception variable
       if (node->catch_exception && node->catch_exception->var) {
-
-          // handle different types of caught exceptions based on variable type
-          switch(node->catch_exception->var->ty->kind) {
-            case TY_FLOAT:
-              // for float exceptions: Move 32-bit float from XMM0 register 
-              // to stack location relative to base pointer
-              // movss = Move Scalar Single-Precision Floating-Point Value
-              println("  movss %%xmm0, %d(%%rbp)", node->catch_exception->var->ofs);
-              break;
-            case TY_DOUBLE:
-              // for double exceptions: Move 64-bit double from XMM0 register
-              // to stack location relative to base pointer
-              // movsd = Move Scalar Double-Precision Floating-Point Value 
-              println("  movsd %%xmm0, %d(%%rbp)", node->catch_exception->var->ofs);
-              break;
-            default:
-              // for integer/pointer exceptions: Move value from RAX register
-              // to stack location relative to base pointer
-              // Standard mov instruction for general purpose registers
-              println("  mov %%rax, %d(%%rbp)", node->catch_exception->var->ofs);
-          }
+        // handle different types of caught exceptions based on variable type
+        switch(node->catch_exception->var->ty->kind) {
+          case TY_FLOAT:
+            // for float exceptions: Move 32-bit float from XMM0 register 
+            // to stack location relative to base pointer
+            // movss = Move Scalar Single-Precision Floating-Point Value
+            println("  movss %%xmm0, %d(%%rbp)", node->catch_exception->var->ofs);
+            break;
+          case TY_DOUBLE:
+            // for double exceptions: Move 64-bit double from XMM0 register
+            // to stack location relative to base pointer
+            // movsd = Move Scalar Double-Precision Floating-Point Value 
+            println("  movsd %%xmm0, %d(%%rbp)", node->catch_exception->var->ofs);
+            break;
+          default:
+            // for integer/pointer exceptions: Move value from RAX register
+            // to stack location relative to base pointer
+            // Standard mov instruction for general purpose registers
+            println("  mov %%rax, %d(%%rbp)", node->catch_exception->var->ofs);
+        }
       }
 
       gen_stmt(node->catch_block);
