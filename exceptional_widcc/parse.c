@@ -1661,6 +1661,7 @@ static Node *stmt(Token **rest, Token *tok, bool chained, bool create_scope) {
     Node *node = new_node(ND_TRY, tok);
     node->try_label = new_unique_name();
 
+    node->target_vla = current_vla;
     enter_scope();
 
     Node *c_try = current_try;
@@ -1704,6 +1705,8 @@ static Node *stmt(Token **rest, Token *tok, bool chained, bool create_scope) {
 
     node->finally_block = stmt(&tok, tok->next, true, false);
 
+    node->top_vla = current_vla;
+    current_vla = node->target_vla;
     leave_scope();
 
     *rest = tok;

@@ -13,3 +13,4 @@
 widcc
 .idea/
 .vscode/
+*.kdev4
