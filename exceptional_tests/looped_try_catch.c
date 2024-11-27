@@ -18,7 +18,7 @@ int main() {
 			printf("Hello from finally block\n");
 
 		}
-		ex_nr++;
+		ex_nr+=1;
 	}
 	
     return 0;
