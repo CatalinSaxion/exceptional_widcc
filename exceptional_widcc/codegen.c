@@ -1288,13 +1288,33 @@ static void gen_stmt(Node *node) {
     printf("Generating code for try block\n");
     gen_stmt(node->try_block);
 
-    // Jump to the finally block if no exception occurs
+    // jump to the finally block if no exception occurs
     println("  jmp %sfinally", node->try_label);
 
     if(node->catch_block){
       printf("Generating code for catch block\n");
-      //printf("Aici e %d\n",node->throw_exception);
+
+      // store exception value before catch block starts
       println("%scatch:", node->try_label);
+
+      // check if there is a catch exception variable
+      if (node->catch_exception && node->catch_exception->var) {
+        // handle different types of caught exceptions based on variable type
+        switch(node->catch_exception->var->ty->kind) {
+          case TY_FLOAT:
+            // for float exceptions: Move 32-bit float from XMM0 register 
+            println("  movss %%xmm0, %d(%%rbp)", node->catch_exception->var->ofs);
+            break;
+          case TY_DOUBLE:
+            // for double exceptions: Move 64-bit double from XMM0 register
+            println("  movsd %%xmm0, %d(%%rbp)", node->catch_exception->var->ofs);
+            break;
+          default:
+            // for integer/pointer exceptions: Move value from RAX register
+            println("  mov %%rax, %d(%%rbp)", node->catch_exception->var->ofs);
+        }
+      }
+
       gen_stmt(node->catch_block);
     }
 

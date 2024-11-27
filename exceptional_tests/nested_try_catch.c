@@ -7,21 +7,22 @@ int main() {
 		int a,b,c;
 		try {
 			printf("Hello from try 2 block\n");
-			throw("test");
+			char* test_throw = "test";
+			throw test_throw;
 			printf("Hello after throw 2 block\n");
 		}
-		catch(ex_nr) {
-			printf("caught exception 2: %d\n", ex_nr);
+		catch(char* super_test) {
+			printf("caught exception 2: %s\n", super_test);
 		}
 		finally {
 			printf("Hello from finally 2 block\n");
 		}
-		
-		throw("test");
+		char* test_throw2 = "test2";
+		throw test_throw2;
 		printf("Hello after throw block\n");
 	}
-	catch(ex_nr) {
-		printf("caught exception: %d\n", ex_nr);
+	catch(char* super_test2) {
+		printf("caught exception: %s\n", super_test2);
 
 	}
 	finally {

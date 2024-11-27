@@ -4,41 +4,40 @@ int calc(int a, int b) {
 	int sum = a + b;
 	try{
 		printf("Hello from try 3 block\n");
-	throw 1;
+	throw sum;
 	}
-	catch(sum) {
+	catch(int sum) {
 		printf("caught exception 3: %d\n", sum);
 	}
 	finally {
-		printf("Hello from finally 3  block\n");
+		printf("Hello from finally 3 block\n");
 	}
 	return sum;
 }
 
 int main() {
     printf("Hello, World!\n");
-	int ex_nr=0;
 	try {
 
 		int sum = calc(1,2);
 		int a,b,c;
 		try {
 			printf("Hello from try 2 block\n");
-			throw("test");
+			throw sum;
 			printf("Hello after throw 2 block\n");
 		}
-		catch(ex_nr) {
-			printf("caught exception 2: %d\n", ex_nr);
+		catch(int ex) {
+			printf("caught exception 2: %d\n", ex);
 		}
 		finally {
 			printf("Hello from finally 2 block\n");
 		}
 		
-		throw("test");
+		throw 2;
 		printf("Hello after throw block\n");
 	}
-	catch(ex_nr) {
-		printf("caught exception: %d\n", ex_nr);
+	catch(int ex2) {
+		printf("caught exception: %d\n", ex2);
 
 	}
 	finally {
