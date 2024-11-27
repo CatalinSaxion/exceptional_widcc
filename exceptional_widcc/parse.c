@@ -1686,8 +1686,6 @@ static Node *stmt(Token **rest, Token *tok, bool chained, bool create_scope) {
       }
 
       char *name = get_ident(tok);
-      if (!name)
-        error_tok(tok, "Identifier expected");
       
       tok = tok->next;
 
@@ -1733,7 +1731,7 @@ static Node *stmt(Token **rest, Token *tok, bool chained, bool create_scope) {
     node->throw_exception = exp;
     node->throw_label = current_try->try_label;
 
-   current_try->throw_exception = node->throw_exception;
+    current_try->throw_exception = node->throw_exception;
     *rest = skip(tok, ";");
     return node;
   }
