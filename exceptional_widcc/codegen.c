@@ -1311,7 +1311,7 @@ static void gen_stmt(Node *node) {
             break;
           default:
             // for integer/pointer exceptions: Move value from RAX register
-            println("  mov %%rax, %d(%%rbp)", node->catch_exception->var->ofs);
+            println("  mov %%eax, %d(%%rbp)", node->catch_exception->var->ofs);
         }
       }
 
