@@ -254,7 +254,6 @@ typedef enum {
   ND_CATCH,     // "catch"
   ND_FINALLY,   // "finally"
   ND_THROW,     // "throw"
-  ND_EXCEPT,    // "except"
   ND_IF,        // "if"
   ND_FOR,       // "for" or "while"
   ND_DO,        // "do"
@@ -390,7 +389,6 @@ typedef enum {
   TY_VLA, // variable-length array
   TY_STRUCT,
   TY_UNION,
-  TY_EXCEPTION,
 } TypeKind;
 
 struct Type {
@@ -425,7 +423,6 @@ struct Type {
   // Function type
   Scope *scopes;
   Type *return_ty;
-  Type *throw_ty;
   Obj *param_list;
   Node *pre_calc;
   bool is_variadic;
