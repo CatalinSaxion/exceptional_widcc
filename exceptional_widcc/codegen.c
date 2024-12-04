@@ -1313,10 +1313,15 @@ static void gen_stmt(Node *node) {
             // for pointers exceptions: Move value from RAX register
             println("  mov %%rax, %d(%%rbp)", node->catch_exception->var->ofs);
             break;
-          default:
+          case TY_INT:
             // for integer exceptions: Move value from EAX register
             println("  mov %%eax, %d(%%rbp)", node->catch_exception->var->ofs);
+            break;
+          default:
+            error_tok(node->tok, "Don't know how to generate code for this type");
+            break;
         }
+
       }
 
       gen_stmt(node->catch_block);
