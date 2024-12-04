@@ -1,6 +1,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+// Test basic integer exception in void func
+void test_basic() {
+    try {
+        printf("Basic test in Void Function\n");
+        throw 41;
+    }
+    catch(int x) {
+        printf("Caught int: %d\n", x);
+    }
+    finally {
+        printf("Basic finally\n");
+    }
+}
+
 // Test basic integer exception
 int test_basic_int() {
     try {
@@ -149,6 +163,11 @@ int looped_try_catch() {
 
 int main() {
     printf("=== Starting Exception Tests ===\n\n");
+
+
+    printf("0. Basic Integer Test In Void Function\n");
+    test_basic();
+    printf("Result: Success\n\n");
 
     printf("1. Basic Integer Test\n");
     int result1 = test_basic_int();
