@@ -1301,29 +1301,48 @@ static void gen_stmt(Node *node) {
       if (node->catch_exception && node->catch_exception->var) {
         // handle different types of caught exceptions based on variable type
         switch(node->catch_exception->var->ty->kind) {
-          case TY_FLOAT:
-            // for float exceptions: Move 32-bit float from XMM0 register 
-            println("  movss %%xmm0, %d(%%rbp)", node->catch_exception->var->ofs);
-            break;
-          case TY_DOUBLE:
-            // for double exceptions: Move 64-bit double from XMM0 register
-            println("  movsd %%xmm0, %d(%%rbp)", node->catch_exception->var->ofs);
-            break;
-          case TY_PTR:
-            // for pointers exceptions: Move value from RAX register
-            println("  mov %%rax, %d(%%rbp)", node->catch_exception->var->ofs);
-            break;
-          case TY_INT:
-            // for integer exceptions: Move value from EAX register
-            println("  mov %%eax, %d(%%rbp)", node->catch_exception->var->ofs);
-            break;
-          default:
-            error_tok(node->tok, "Don't know how to generate code for this type");
-            break;
+            case TY_FLOAT:
+                println("  movss %%xmm0, %d(%%rbp)", node->catch_exception->var->ofs);
+                break;
+            case TY_DOUBLE:
+                println("  movsd %%xmm0, %d(%%rbp)", node->catch_exception->var->ofs);
+                break;
+            case TY_LDOUBLE:
+                println("  fldt %%st(0), %d(%%rbp)", node->catch_exception->var->ofs);
+                break;
+            case TY_LONG:
+            case TY_LONGLONG:
+                println("  mov %%rax, %d(%%rbp)", node->catch_exception->var->ofs);
+                break;
+            case TY_ARRAY:
+            case TY_VLA:
+                println("  mov %%rax, %d(%%rbp)", node->catch_exception->var->ofs);
+                break;
+            case TY_STRUCT:
+            case TY_UNION:
+                println("  # Copy struct/union data"); 
+                gen_mem_copy(0, "%rax", node->catch_exception->var->ofs, "%rbp", 
+                            node->catch_exception->var->ty->size);
+                break;
+            case TY_FUNC:
+            case TY_PTR:
+                println("  mov %%rax, %d(%%rbp)", node->catch_exception->var->ofs);
+                break;
+            case TY_CHAR:
+            case TY_SHORT:
+            case TY_INT:
+                println("  mov %%eax, %d(%%rbp)", node->catch_exception->var->ofs);
+                break;
+            case TY_BOOL:
+                println("  movzbl %%al, %%eax");
+                println("  mov %%eax, %d(%%rbp)", node->catch_exception->var->ofs);
+                break;
+            default:
+                error_tok(node->tok, "Unhandled exception type '%d'\n", 
+                         node->catch_exception->var->ty->kind);
+                break;
         }
-
       }
-
       gen_stmt(node->catch_block);
     }
 

@@ -1,20 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// Test basic integer exception in void func
-void test_basic() {
-    try {
-        printf("Basic test in Void Function\n");
-        throw 41;
-    }
-    catch(int x) {
-        printf("Caught int: %d\n", x);
-    }
-    finally {
-        printf("Basic finally\n");
-    }
-}
-
 // Test basic integer exception
 int test_basic_int() {
     try {
@@ -161,13 +147,83 @@ int looped_try_catch() {
     return 0;
 }
 
+// Test long int exception
+long int func_long_int() {
+    try {
+        long int my_long_int= 3000000000;
+        throw my_long_int;
+    }
+    catch(long int x) {
+        printf("Caught long int: %ld\n", x);
+        return x;
+    }
+    finally {
+        return 0;
+    }
+}
+
+void func_struct() {
+    struct test_struct {
+        int* a;
+        int b;
+        char c;
+    };
+    
+    struct test_struct *ptr = NULL;
+    int* allocated_mem = NULL;
+    
+    try {
+        struct test_struct my_struct;
+        
+        // Proper allocation
+        allocated_mem = malloc(sizeof(int));
+        if (!allocated_mem) {
+            printf("Memory allocation failed\n");
+            return;
+        }
+        *allocated_mem = 10;
+        
+        my_struct.a = allocated_mem;
+        my_struct.b = 100;
+        my_struct.c = 'G';
+        
+        printf("Throwing struct: {a=%d, b=%d, c=%c}\n", 
+               *my_struct.a, my_struct.b, my_struct.c);
+               
+        throw my_struct;
+    }
+    catch(struct test_struct caught_struct) {
+        printf("Caught struct: {a=%d, b=%d, c=%c}\n", *caught_struct.a, caught_struct.b, caught_struct.c);
+        allocated_mem = caught_struct.a;
+    }
+    finally {
+        printf("Struct finally\n");
+        if (allocated_mem) {
+            free(allocated_mem);
+            allocated_mem = NULL;
+        }
+    }
+}
+
+int thrown_func() {
+   int x = 23;
+   return x;
+}
+
+void throw_func() {
+    try{
+        throw thrown_func();
+    }
+    catch(int x) {
+        printf("Caught int: %d\n", x);
+    }
+    finally {
+        printf("Finally block\n");
+    }
+}
+
 int main() {
     printf("=== Starting Exception Tests ===\n\n");
-
-
-    printf("0. Basic Integer Test In Void Function\n");
-    test_basic();
-    printf("Result: Success\n\n");
 
     printf("1. Basic Integer Test\n");
     int result1 = test_basic_int();
@@ -200,6 +256,18 @@ int main() {
     printf("8. Looped Try-Catch Test\n");
     looped_try_catch();
     printf("Result: Loop Completed\n\n");
+
+    printf("9. Long Integer Test\n");
+    long int result9 = func_long_int();
+    printf("Result: %ld\n\n", result9);
+
+    printf("10. Struct Test\n");
+    func_struct();
+    printf("Result: Struct Test Completed\n\n");
+
+    printf("11. Thrown Function Test\n");
+    throw_func();
+    printf("Result: Thrown Function Test Completed\n\n");
 
     printf("=== All Tests Completed ===\n");
     return 0;
