@@ -1309,8 +1309,12 @@ static void gen_stmt(Node *node) {
             // for double exceptions: Move 64-bit double from XMM0 register
             println("  movsd %%xmm0, %d(%%rbp)", node->catch_exception->var->ofs);
             break;
+          case TY_PTR:
+            // for pointers exceptions: Move value from RAX register
+            println("  mov %%rax, %d(%%rbp)", node->catch_exception->var->ofs);
+            break;
           default:
-            // for integer/pointer exceptions: Move value from RAX register
+            // for integer exceptions: Move value from EAX register
             println("  mov %%eax, %d(%%rbp)", node->catch_exception->var->ofs);
         }
       }
