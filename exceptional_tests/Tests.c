@@ -11,9 +11,6 @@ int test_basic_int() {
         printf("Caught int: %d\n", x);
         return x;
     }
-    finally {
-        printf("Basic int finally\n");
-    }
     return 0;
 }
 

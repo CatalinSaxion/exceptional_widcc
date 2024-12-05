@@ -1288,8 +1288,11 @@ static void gen_stmt(Node *node) {
     printf("Generating code for try block\n");
     gen_stmt(node->try_block);
 
-    // jump to the finally block if no exception occurs
-    println("  jmp %sfinally", node->try_label);
+    // jump to finally block if there is one or end of try block
+    if (node->finally_block)
+    	println("  jmp %sfinally", node->try_label);
+    else
+        println("  jmp %send", node->try_label);
 
     if(node->catch_block){
       printf("Generating code for catch block\n");
@@ -1346,9 +1349,11 @@ static void gen_stmt(Node *node) {
       gen_stmt(node->catch_block);
     }
 
+    if(node->finally_block) {
     printf("Generating code for finally block\n");
     println("%sfinally:", node->try_label);
     gen_stmt(node->finally_block);
+    }
 
     println("%send:", node->try_label);
     return;

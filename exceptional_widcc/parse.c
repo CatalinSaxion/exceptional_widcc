@@ -1657,65 +1657,85 @@ static Node *stmt(Token **rest, Token *tok, bool chained, bool create_scope) {
     return node;
   }
 
+  // Parse a 'try' block
   if(equal(tok, "try")) {
     Node *node = new_node(ND_TRY, tok);
+
+    // Generate a unique label for this try block
     node->try_label = new_unique_name();
 
+    // Save current VLA state and enter a new scope
     node->target_vla = current_vla;
     enter_scope();
 
+    // Save the current try context and set this node as the active try
     Node *c_try = current_try;
     current_try = node;
+
+    // Parse the 'try' block
     node->try_block = stmt(&tok, tok->next, true, false);
 
+    // Parse an optional 'catch' block
     if (equal(tok, "catch")) {
       tok = tok->next; // consume catch
+
+      // Expect '(' after 'catch'
       if (!consume(&tok, tok, "("))
         error_tok(tok, "Expected '(' after 'catch'");
 
       Token *type_tok = tok;
 
+      // Parse the catch variable's type
       Type *catch_ty = typename(&tok, tok);
       if (!catch_ty)
         error_tok(tok, "Type name expected");
 
-      if (node->throw_exception && 
-          catch_ty->kind != node->throw_exception->ty->kind) {
+      // Ensure the catch type matches the thrown exception type
+      if (node->throw_exception && catch_ty->kind != node->throw_exception->ty->kind) {
           error_tok(type_tok, "catch type '%d' does not match thrown type '%d'",
               catch_ty->kind, node->throw_exception->ty->kind);
       }
 
+      // Parse the catch variable's name
       char *name = get_ident(tok);
-      
       tok = tok->next;
 
+      // Expect ')' after the catch variable
       if (!consume(&tok, tok, ")"))
           error_tok(tok, "Expected ')' after catch parameter");
 
+      // Create a new local variable for the catch variable
       Obj *var = new_lvar(name, catch_ty);
       node->catch_exception = new_var_node(var, tok);
+
+      // Parse the catch block
       node->catch_block = stmt(&tok, tok, true, false);
     }
 
-    if (!equal(tok, "finally")) {
-      error_tok(tok, "Expected 'finally' block after 'try' (and optional 'catch') block");
+    // Parse an optional 'finally' block
+    if (equal(tok, "finally")) {
+      tok = tok->next; // consume finally
+      node->finally_block = stmt(&tok, tok, true, false);
     }
 
-    node->finally_block = stmt(&tok, tok->next, true, false);
-
+    // Restore VLA state and leave the current scope
     node->top_vla = current_vla;
     current_vla = node->target_vla;
     leave_scope();
 
-    *rest = tok;
+    // Restore the previous try context
     current_try = c_try;
+
+    *rest = tok;
     return node;
   }
 
 
-
+  // Parse a 'throw' statement
   if (equal(tok, "throw")) {
     Node *node = new_node(ND_THROW, tok);
+
+    // Ensure 'throw' is used within a 'try' block
     if(!current_try) {
         error_tok(tok, "throw used outside of a try block");
         }
@@ -1725,13 +1745,18 @@ static Node *stmt(Token **rest, Token *tok, bool chained, bool create_scope) {
         error_tok(tok, "Expected to throw an exception");
     }
 
+    // Parse the exception expression
     Node *exp = expr(&tok, tok->next);
     add_type(exp);
 
+    // Store the parsed exception expression in the throw node
     node->throw_exception = exp;
-    node->throw_label = current_try->try_label;
 
+    // Link the throw node to the current try block
+    node->throw_label = current_try->try_label;
     current_try->throw_exception = node->throw_exception;
+
+    // Ensure the statement ends with a semicolon
     *rest = skip(tok, ";");
     return node;
   }
