@@ -772,6 +772,27 @@ static void print_loc(Token *tok) {
   line_no = tok->display_line_no;
 }
 
+
+int has_return(Node *node) {
+  int count = 0;
+    for (Node *n = node->try_block; n; n = n->next) {
+        if (n->kind == ND_RETURN) {
+            count++;
+        }
+    }
+
+    if (node->catch_block) {
+        for (Node *n = node->catch_block; n; n = n->next) {
+            if (n->kind == ND_RETURN) {
+                count++;
+            }
+        }
+    }
+
+    // Finally blocks shouldn't have pending returns as they are cleanup blocks
+    return count;
+}
+
 // Generate code for a given node.
 static void gen_expr(Node *node) {
   if (opt_g)
@@ -1288,11 +1309,13 @@ static void gen_stmt(Node *node) {
     printf("Generating code for try block\n");
     gen_stmt(node->try_block);
 
-    // jump to finally block if there is one or end of try block
-    if (node->finally_block)
-    	println("  jmp %sfinally", node->try_label);
-    else
-        println("  jmp %send", node->try_label);
+    // jump to finally block if there's no pending return
+    if(has_return(node) == 0) {
+    	if (node->finally_block)
+    		println("  jmp %sfinally", node->try_label);
+    	else
+        	println("  jmp %send", node->try_label);
+    }
 
     if(node->catch_block){
       printf("Generating code for catch block\n");
@@ -1353,6 +1376,12 @@ static void gen_stmt(Node *node) {
     printf("Generating code for finally block\n");
     println("%sfinally:", node->try_label);
     gen_stmt(node->finally_block);
+
+    // After finally, check if there is a pending return
+    if(has_return(node) > 0) {
+          println("  jmp %sret_pending", node->try_label);
+    }
+
     }
 
     println("%send:", node->try_label);
@@ -1477,8 +1506,15 @@ static void gen_stmt(Node *node) {
         break;
       }
     }
-
-    println("  jmp 9f");
+    // Check if return is inside a 'try' or 'catch' with a 'finally' block
+    if (node->try_block && node->try_block->finally_block) {
+        println("  jmp %sfinally", node->try_block->try_label);
+        if (has_return(node) == 1) {
+        	println("  %sret_pending:", node->try_block->try_label); // Make a label for pending return
+        }
+    } else {
+        println("  jmp 9f"); // Direct return if not in try-catch-finally
+    }
     return;
   case ND_EXPR_STMT:
     gen_expr(node->lhs);

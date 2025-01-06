@@ -88,6 +88,7 @@ static Node *current_switch;
 
 // Points to a node representing a try if we are parsing
 static Node *current_try;
+static ExceptionState current_ex_state = NOT_IN_TRY_CATCH;
 
 static Obj *current_vla;
 static Obj *brk_vla;
@@ -1642,6 +1643,14 @@ static void loop_body(Token **rest, Token *tok, Node *node) {
 static Node *stmt(Token **rest, Token *tok, bool chained, bool create_scope) {
   if (equal(tok, "return")) {
     Node *node = new_node(ND_RETURN, tok);
+
+    // Link the return to the active try block only if inside a 'try' or 'catch'
+    if (current_ex_state == IN_TRY_BLOCK || current_ex_state == IN_CATCH_BLOCK) {
+        node->try_block = current_try;
+    } else {
+        node->try_block = NULL;
+    }
+
     if (consume(rest, tok->next, ";"))
       return node;
 
@@ -1671,6 +1680,9 @@ static Node *stmt(Token **rest, Token *tok, bool chained, bool create_scope) {
     // Save the current try context and set this node as the active try
     Node *c_try = current_try;
     current_try = node;
+
+    ExceptionState prev_ex_state = current_ex_state;
+    current_ex_state = IN_TRY_BLOCK;
 
     // Parse the 'try' block
     node->try_block = stmt(&tok, tok->next, true, false);
@@ -1708,6 +1720,9 @@ static Node *stmt(Token **rest, Token *tok, bool chained, bool create_scope) {
       Obj *var = new_lvar(name, catch_ty);
       node->catch_exception = new_var_node(var, tok);
 
+      // Enter 'catch' block
+      current_ex_state = IN_CATCH_BLOCK;
+
       // Parse the catch block
       node->catch_block = stmt(&tok, tok, true, false);
     }
@@ -1725,6 +1740,9 @@ static Node *stmt(Token **rest, Token *tok, bool chained, bool create_scope) {
 
     // Restore the previous try context
     current_try = c_try;
+
+    // Restore previous state
+    current_ex_state = prev_ex_state;
 
     *rest = tok;
     return node;

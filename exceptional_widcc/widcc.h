@@ -98,6 +98,13 @@ typedef enum {
   TK_EOF,     // End-of-file markers
 } TokenKind;
 
+typedef enum {
+    NOT_IN_TRY_CATCH,
+    IN_TRY_BLOCK,
+    IN_CATCH_BLOCK
+} ExceptionState;
+
+
 typedef struct File File;
 struct File {
   char *name;
