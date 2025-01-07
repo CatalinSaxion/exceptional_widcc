@@ -101,6 +101,7 @@ typedef enum {
 typedef enum {
     NOT_IN_TRY_BLOCK,
     IN_TRY_BLOCK,
+  	IN_FINALLY_BLOCK,
 } ExceptionState;
 
 

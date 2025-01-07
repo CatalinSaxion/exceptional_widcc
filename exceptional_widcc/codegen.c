@@ -1505,6 +1505,7 @@ static void gen_stmt(Node *node) {
     }
     printf("Now in Return\n");
 
+    println("  mov %%rax, -8(%%rbp)");
 
     // Set the pending return flag
     println("  mov $1, %%rdx");
@@ -1516,8 +1517,13 @@ static void gen_stmt(Node *node) {
 
         println(" %sret_pend", node->try_block->try_label);
 
+        println("  mov -8(%%rbp), %%rax"); // restore the saved return value
+        println("  jmp 9f");
+
+
     }
-    println("  jmp 9f");
+    else
+    	println("  jmp 9f");
     }
     return;
   case ND_EXPR_STMT:

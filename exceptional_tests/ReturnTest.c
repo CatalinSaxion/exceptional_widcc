@@ -8,8 +8,8 @@ int test(int a) {
 			printf("Hello inside if\n");
 			return 42;
 		}
-		else if (a == 2)
-			return 50;
+		// else if (a == 2)
+			// return 50;
 		//throw 1;
 		printf("Hello after return in try\n");
     } catch (int x) {

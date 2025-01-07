@@ -1645,7 +1645,10 @@ static Node *stmt(Token **rest, Token *tok, bool chained, bool create_scope) {
     Node *node = new_node(ND_RETURN, tok);
 
     // Link the return to the active try block only if inside a 'try' or 'catch'
-    if (current_ex_state == IN_TRY_BLOCK) {
+    if (current_ex_state == IN_FINALLY_BLOCK) {
+      error_tok(tok, "Return is not allowed to be used inside a finally block");
+      }
+    else if (current_ex_state == IN_TRY_BLOCK) {
         node->try_block = current_try;
     } else {
         node->try_block = NULL;
@@ -1726,6 +1729,7 @@ static Node *stmt(Token **rest, Token *tok, bool chained, bool create_scope) {
 
     // Parse an optional 'finally' block
     if (equal(tok, "finally")) {
+      current_ex_state = IN_FINALLY_BLOCK;
       tok = tok->next; // consume finally
       node->finally_block = stmt(&tok, tok, true, false);
     }
