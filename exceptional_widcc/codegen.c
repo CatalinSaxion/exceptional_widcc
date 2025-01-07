@@ -1310,12 +1310,10 @@ static void gen_stmt(Node *node) {
     gen_stmt(node->try_block);
 
     // jump to finally block if there's no pending return
-    if(has_return(node) == 0) {
-    	if (node->finally_block)
-    		println("  jmp %sfinally", node->try_label);
-    	else
-        	println("  jmp %send", node->try_label);
-    }
+    if (node->finally_block)
+    	println("  jmp %sfinally", node->try_label);
+    else
+        println("  jmp %send", node->try_label);
 
     if(node->catch_block){
       printf("Generating code for catch block\n");
@@ -1377,12 +1375,12 @@ static void gen_stmt(Node *node) {
     println("%sfinally:", node->try_label);
     gen_stmt(node->finally_block);
 
-    // After finally, check if there is a pending return
-    if(has_return(node) > 0) {
-          println("  jmp %sret_pending", node->try_label);
-    }
 
-    }
+    println("  cmp $1, %%rdx");
+
+    println("  je %sret_pend", node->try_label);
+
+    println("  mov $0, %%rdx");
 
     println("%send:", node->try_label);
     return;
@@ -1476,7 +1474,6 @@ static void gen_stmt(Node *node) {
       gen_stmt(n);
     dealloc_vla(node);
     return;
-  case ND_GOTO:
     dealloc_vla(node);
     println("  jmp %s", node->unique_label);
     return;
@@ -1506,14 +1503,21 @@ static void gen_stmt(Node *node) {
         break;
       }
     }
+    printf("Now in Return\n");
+
+
+    // Set the pending return flag
+    println("  mov $1, %%rdx");
+
     // Check if return is inside a 'try' or 'catch' with a 'finally' block
     if (node->try_block && node->try_block->finally_block) {
+      	printf("Jumping to finally!\n");
         println("  jmp %sfinally", node->try_block->try_label);
-        if (has_return(node) == 1) {
-        	println("  %sret_pending:", node->try_block->try_label); // Make a label for pending return
-        }
-    } else {
-        println("  jmp 9f"); // Direct return if not in try-catch-finally
+
+        println(" %sret_pend", node->try_block->try_label);
+
+    }
+    println("  jmp 9f");
     }
     return;
   case ND_EXPR_STMT:

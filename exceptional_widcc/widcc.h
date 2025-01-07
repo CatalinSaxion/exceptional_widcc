@@ -99,9 +99,8 @@ typedef enum {
 } TokenKind;
 
 typedef enum {
-    NOT_IN_TRY_CATCH,
+    NOT_IN_TRY_BLOCK,
     IN_TRY_BLOCK,
-    IN_CATCH_BLOCK
 } ExceptionState;
 
 
