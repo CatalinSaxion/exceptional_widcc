@@ -1371,22 +1371,23 @@ static void gen_stmt(Node *node) {
     }
 
     if(node->finally_block) {
-    printf("Generating code for finally block\n");
-    println("%sfinally:", node->try_label);
-    gen_stmt(node->finally_block);
+      printf("Generating code for finally block\n");
+      println("%sfinally:", node->try_label);
 
+      gen_stmt(node->finally_block);
 
-    println("  cmp $1, %%rdx");
-
-    println("  je %sret_pend", node->try_label);
-
-    println("  mov $0, %%rdx");
+      println("  test %%rbx, %%rbx");
+      println("  je %send", node->try_label);
+      println("  mov %%rbx, %%rax");
+      println("  xor %%rbx, %%rbx");
+      println("  jmp 9f");
+    }
 
     println("%send:", node->try_label);
     return;
   }
 
-  case ND_THROW:
+  case ND_THROW: {
     printf("Generating code for throw\n");
     if (node->throw_exception)
       gen_expr(node->throw_exception);
@@ -1394,7 +1395,7 @@ static void gen_stmt(Node *node) {
     // Jump to the specific catch block
     println("  jmp %scatch", node->throw_label);
     return;
-
+  }
 
   case ND_IF: {
     int c = count();
@@ -1488,7 +1489,7 @@ static void gen_stmt(Node *node) {
     return;
 
 
-  case ND_RETURN:
+  case ND_RETURN:{
     if (node->lhs) {
       gen_expr(node->lhs);
       Type *ty = node->lhs->ty;
@@ -1505,27 +1506,17 @@ static void gen_stmt(Node *node) {
     }
     printf("Now in Return\n");
 
-    println("  mov %%rax, -8(%%rbp)");
-
-    // Set the pending return flag
-    println("  mov $1, %%rdx");
-
     // Check if return is inside a 'try' or 'catch' with a 'finally' block
     if (node->try_block && node->try_block->finally_block) {
-      	printf("Jumping to finally!\n");
+      	println("  mov %%rax, %%rbx");
+        printf("Jumping to finally!\n");
         println("  jmp %sfinally", node->try_block->try_label);
-
-        println(" %sret_pend", node->try_block->try_label);
-
-        println("  mov -8(%%rbp), %%rax"); // restore the saved return value
-        println("  jmp 9f");
-
-
     }
     else
     	println("  jmp 9f");
-    }
+    
     return;
+  }
   case ND_EXPR_STMT:
     gen_expr(node->lhs);
     return;
