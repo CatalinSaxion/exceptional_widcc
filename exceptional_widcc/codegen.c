@@ -1377,7 +1377,7 @@ static void gen_stmt(Node *node) {
       gen_stmt(node->finally_block);
 
       println("  test %%r12, %%r12");
-      println("  je %send", node->try_label);
+      println("  jz %send", node->try_label);
 
       TypeKind type = current_fn->ty->return_ty->kind;
       switch (type) {
@@ -1774,6 +1774,7 @@ static void emit_text(Obj *prog) {
     // Prologue
     println("  push %%rbp");
     println("  mov %%rsp, %%rbp");
+    println("  xor %%r12, %%r12");
 
     long stack_alloc_loc = ftell(output_file);
     println("                             ");
