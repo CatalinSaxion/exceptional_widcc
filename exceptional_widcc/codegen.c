@@ -1376,10 +1376,49 @@ static void gen_stmt(Node *node) {
 
       gen_stmt(node->finally_block);
 
-      println("  test %%rbx, %%rbx");
+      println("  test %%r12, %%r12");
       println("  je %send", node->try_label);
-      println("  mov %%rbx, %%rax");
-      println("  xor %%rbx, %%rbx");
+
+      TypeKind type = current_fn->ty->return_ty->kind;
+      switch (type) {
+        // 8-bit return
+        case TY_CHAR:
+        case TY_BOOL:
+            println("  mov %%bl, %%al");  // Move 8-bit value from rbx to rax
+            println("  xor %%bl, %%bl");  // Clear rbx
+            break;
+
+        // 16-bit return
+        case TY_SHORT:
+            println("  mov %%bx, %%ax");  // Move 16-bit value from rbx to rax
+            println("  xor %%bx, %%bx");  // Clear rbx
+            break;
+
+        // 32-bit return
+        case TY_INT:
+        case TY_ENUM:
+            println("  mov %%ebx, %%eax"); // Move 32-bit value from rbx to rax
+            println("  xor %%ebx, %%ebx"); // Clear rbx
+            break;
+
+        // 64-bit return
+        case TY_LONG:
+        case TY_LONGLONG:
+        case TY_PTR:
+        case TY_FUNC:
+        case TY_PCHAR:
+            println("  mov %%rbx, %%rax"); // Move 64-bit value from rbx to rax
+            println("  xor %%rbx, %%rbx"); // Clear rbx
+            break;
+
+
+        default:
+            error_tok(node->tok, "Unsupported type in return preparation: %d", type);
+            break;
+      }
+
+      println("  xor %%r12, %%r12");
+
       println("  jmp 9f");
     }
 
@@ -1504,11 +1543,42 @@ static void gen_stmt(Node *node) {
         break;
       }
     }
-    printf("Now in Return\n");
 
     // Check if return is inside a 'try' or 'catch' with a 'finally' block
     if (node->try_block && node->try_block->finally_block) {
-      	println("  mov %%rax, %%rbx");
+        TypeKind type = node->lhs->ty->kind;
+        switch (type) {
+          // 8-bit moves
+          case TY_CHAR:
+          case TY_BOOL:
+              println("  mov %%al, %%bl");
+              break;
+
+          // 16-bit moves
+          case TY_SHORT:
+              println("  mov %%ax, %%bx");
+              break;
+
+          // 32-bit moves
+          case TY_INT:
+          case TY_ENUM:
+              println("  mov %%eax, %%ebx");
+              break;
+
+          // 64-bit moves
+          case TY_LONG:
+          case TY_LONGLONG:
+          case TY_PTR:
+          case TY_FUNC:
+          case TY_PCHAR:
+              println("  mov %%rax, %%rbx");
+              break;
+
+          default:
+              error_tok(node->tok, "Unhandled return type '%d'\n", type);
+              break;
+        }
+        println("  mov $1, %%r12");
         printf("Jumping to finally!\n");
         println("  jmp %sfinally", node->try_block->try_label);
     }

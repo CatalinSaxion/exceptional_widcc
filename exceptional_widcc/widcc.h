@@ -301,6 +301,7 @@ struct Node {
   Node *try_block;
   Node *catch_block;
   Node *finally_block;
+
   // exception type
   char* throw_label;
   Node *throw_exception;
